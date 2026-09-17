@@ -29,3 +29,13 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 - event resource with get, query, page, delete, update and parse, and its attempt sub-resource
 - webhook resource with create, get, query, page and delete
 - GitHub Actions CI running lein check and the offline lein test suite
+- pix-reversal (create, get, query, page, parse, response), pix-statement (csv), pix-director, pix-domain and pix-key-holmes resources, with logs where sdk-python has them
+- pix-claim, pix-infraction (create kept as a deprecated function that throws, as sdk-python's does), pix-fraud, pix-chargeback, pix-dispute, pix-user and pix-internal-transaction-report resources, with their logs
+- pix-pull-subscription (parse), pix-pull-request, static-brcode, dynamic-brcode (response-due, response-instant, verify) and brcode-preview resources, with their logs
+- issuing-holder, issuing-card (expand on create and get), issuing-rule, issuing-product, issuing-design (pdf), issuing-embossing-kit, issuing-embossing-request, issuing-stock, issuing-restock and issuing-stock-rule resources, with their logs
+- issuing-purchase (parse, response), issuing-invoice, issuing-withdrawal, issuing-balance, issuing-transaction, issuing-billing-invoice, issuing-billing-transaction, issuing-token (parse, response-authorization, response-activation), issuing-token-activation (parse), issuing-token-design (pdf), issuing-token-request, merchant-category, merchant-country and card-method resources, with their logs
+- credit-note (pdf, payment), credit-signer (resend-token), credit-preview, credit-holmes, ledger and ledger-transaction resources, with their logs
+- individual-identity, individual-account-request, individual-account-attachment, business-identity, business-attachment and business-account-request resources, with their logs
+- README usage sections for every resource, mirroring the sdk-python README
+### Notes
+- mirrors sdk-python at 271c190d, which removed IndividualDocument the day this SDK was derived, so that resource is not included
