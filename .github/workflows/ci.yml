@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# starkcore is not published to Clojars yet, so the build installs it from a
+# sibling checkout into the runner's ~/.m2 before resolving this project's
+# dependencies. `lein deps` would otherwise fail on com.starkinfra/starkcore.
+env:
+  CORE_CLOJURE_REF: master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          path: starkinfra/sdk-clojure
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: starkinfra/core-clojure
+          ref: ${{ env.CORE_CLOJURE_REF }}
+          path: starkinfra/core-clojure
+
+      # Pinned to the major tag rather than a sha: no checkout on the build
+      # machine carried a pinned sha for these two actions to copy.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: DeLaGuardo/setup-clojure@v12
+        with:
+          lein: latest
+
+      - name: Install starkcore from the sibling checkout
+        run: lein install
+        working-directory: starkinfra/core-clojure
+
+      - name: Resolve dependencies
+        run: lein deps
+        working-directory: starkinfra/sdk-clojure
+
+      - name: Compile every namespace
+        run: lein check
+        working-directory: starkinfra/sdk-clojure
+
+      # The default selector excludes ^:sandbox, so this job needs no
+      # credentials. `lein test :sandbox` is the credentialed suite and is not
+      # run here.
+      - name: Offline suite
+        run: lein test
+        working-directory: starkinfra/sdk-clojure
