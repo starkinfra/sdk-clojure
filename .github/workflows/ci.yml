@@ -25,16 +25,21 @@ jobs:
           ref: ${{ env.CORE_CLOJURE_REF }}
           path: starkinfra/core-clojure
 
-      # Pinned to the major tag rather than a sha: no checkout on the build
-      # machine carried a pinned sha for these two actions to copy.
-      - uses: actions/setup-java@v4
+      # The repository's Actions policy allows GitHub-owned actions only, each
+      # pinned to a sha. Leiningen therefore comes from its own release script,
+      # pinned to the commit of the 2.11.2 tag, rather than from a third-party
+      # action; the script bootstraps the matching standalone jar on first run.
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: '21'
 
-      - uses: DeLaGuardo/setup-clojure@v12
-        with:
-          lein: latest
+      - name: Install Leiningen 2.11.2
+        run: |
+          sudo curl -fsSL -o /usr/local/bin/lein \
+            https://raw.githubusercontent.com/technomancy/leiningen/795c3a5d68de7a2465582da4184c42d7bd065c76/bin/lein
+          sudo chmod +x /usr/local/bin/lein
+          lein version
 
       - name: Install starkcore from the sibling checkout
         run: lein install
