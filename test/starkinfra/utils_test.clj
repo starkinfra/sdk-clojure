@@ -5,6 +5,7 @@
             [starkinfra.pix-request :as pix-request]
             [starkinfra.settings :as settings]
             [starkinfra.user :as user]
+            [starkinfra.utils.case :as casing]
             [starkinfra.utils.end-to-end-id :as end-to-end-id]
             [starkinfra.utils.json :as json]
             [starkinfra.utils.rest]
@@ -127,12 +128,18 @@
           organization (user/organization "sandbox" "5656565656565656" (:private-pem pair))
           scoped (user/organization-replace organization "4848484848484848")]
       (is (= "organization" (:type organization)))
-      (is (= "project/5656565656565656" (:access-id organization)))
+      (is (= "organization/5656565656565656" (:access-id organization)))
       (is (nil? (:workspace-id organization)))
       (is (= "4848484848484848" (:workspace-id scoped)))
-      (is (= "project/5656565656565656/workspace/4848484848484848"
+      (is (= "organization/5656565656565656/workspace/4848484848484848" (:access-id scoped)))
+      (is (= "organization/5656565656565656/workspace/4848484848484848"
              (:access-id (user/organization "sandbox" "5656565656565656"
                                             (:private-pem pair) "4848484848484848"))))))
+
+  (testing "both user shapes keep the pem, which is what signs a request"
+    (let [pair (key/create)]
+      (is (= (:private-pem pair) (:private-key (user/project "sandbox" "1" (:private-pem pair)))))
+      (is (= (:private-pem pair) (:private-key (user/organization "sandbox" "1" (:private-pem pair)))))))
 
   (testing "a malformed private key is refused at the boundary"
     (is (thrown? IllegalArgumentException (user/project "sandbox" "1" "not a pem")))
@@ -161,19 +168,16 @@
           (settings/language language)
           (settings/user credentials))))))
 
-(deftest rest-payload-and-query-casting
+(deftest write-payload-casting
   (testing "nil members are dropped from write payloads, as python's api_json does"
-    (let [drop-nils #'starkinfra.utils.rest/drop-nils]
-      (is (= {:reason "fraud"} (drop-nils {:reason "fraud" :name nil})))
-      (is (= [{:amount 1} {:amount 2}] (drop-nils [{:amount 1 :tags nil} {:amount 2}])))
-      (is (= {:is-sent false} (drop-nils {:is-sent false}))
-          "false is a value, not an absence")
-      (is (= {:rule {:key "k"}} (drop-nils {:rule {:key "k" :value nil}})))))
+    (is (= {"reason" "fraud"} (json/api-json {:reason "fraud" :name nil})))
+    (is (= [{"amount" 1} {"amount" 2}] (json/api-json [{:amount 1 :tags nil} {:amount 2}])))
+    (is (= {"isSent" false} (json/api-json {:is-sent false}))
+        "false is a value, not an absence")
+    (is (= {"rule" {"key" "k"}} (json/api-json {:rule {:key "k" :value nil}}))))
 
-  (testing "expand values are camelCased for the query string"
-    (let [cast-query #'starkinfra.utils.rest/cast-query]
-      (is (= {:expand ["statistics" "ownerStatistics"]}
-             (cast-query {:expand ["statistics" "owner-statistics"]})))
-      (is (= {:limit 1} (cast-query {:limit 1})))
-      (is (= {} (cast-query {})))
-      (is (nil? (cast-query nil))))))
+  (testing "raw bodies keep their nil members and are still camelCased"
+    (is (= {"reason" "fraud" "name" nil}
+           (casing/cast-keys-to-camel {:reason "fraud" :name nil})))
+    (is (= {"isSent" false} (casing/cast-keys-to-camel {:is-sent false})))
+    (is (nil? (casing/cast-keys-to-camel nil)))))

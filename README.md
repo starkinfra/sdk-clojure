@@ -1075,8 +1075,7 @@ A design PDF can be retrieved by its id.
 
 (def pdf (issuing-token-design/pdf "5155165527080960"))
 
-(with-open [file (io/output-stream "design.pdf")]
-  (.write file pdf))
+(io/copy pdf (io/file "design.pdf"))
 ```
 
 ### Process Purchase authorizations
@@ -1820,11 +1819,12 @@ To get the .csv file corresponding to a Pix statement using its id, run:
 
 ```clojure
 (ns my-lib.core
-  (:require [starkinfra.pix-statement :as pix-statement]))
+  (:require [clojure.java.io :as io]
+            [starkinfra.pix-statement :as pix-statement]))
 
 (def csv (pix-statement/csv "5155165527080960"))
 
-(spit "test.zip" csv)
+(io/copy csv (io/file "test.zip"))
 ```
 
 ### Create PixKeyHolmes
@@ -4300,9 +4300,10 @@ It's possible to delete a single item of a Stark Infra resource.
 
 # Handling errors
 
-The SDK signals errors by throwing `clojure.lang.ExceptionInfo`. The `ex-data`
-of the thrown exception carries the API's own error payload, so you can branch
-on its `:code`.
+The SDK signals errors by throwing `clojure.lang.ExceptionInfo`. When the API
+refused a request, the `ex-data` of the thrown exception carries the HTTP
+`:status` and a list of `:errors`, each with a `:code` and a `:message`, so you
+can branch on either.
 
 Whenever the API detects an error in your request (status code 400), the
 exception data holds the list of individual errors it found:
@@ -4321,7 +4322,20 @@ exception data holds the list of individual errors it found:
 
 If the API runs into an internal error (status code 500), rest assured that the
 development team is already rushing in to fix the mistake and get you back up to
-speed.
+speed. That one surfaces as a single `internalServerError` error; any other
+unexpected status, and a connection that never reached us at all (`:status 0`),
+surfaces as a single `unknownError` error carrying what came back:
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.pix-request :as pix-request]))
+
+(try
+  (pix-request/get "0")
+  (catch clojure.lang.ExceptionInfo exception
+    (println (:status (ex-data exception)))
+    (println (:code (first (:errors (ex-data exception)))))))
+```
 
 `parse` throws an exception carrying `:code "invalidSignature"` when the
 provided content and signature do not check out with the Stark Infra public key:
@@ -4339,7 +4353,8 @@ provided content and signature do not check out with the Stark Infra public key:
 
 The `starkinfra.request` functions are the exception: mirroring sdk-python, they
 never throw on an API error and hand you the `:status` and `:content` of the
-failed response instead.
+failed response instead, whatever the status. `:content` is the parsed body with
+kebab-case keys, or the raw string when the body is not JSON.
 
 # Help and Feedback
 

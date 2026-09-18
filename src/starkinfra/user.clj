@@ -1,7 +1,18 @@
 (ns starkinfra.user
   "Used to define API user."
   (:require [core-clojure.user.organization :as core-organization]
-            [core-clojure.user.project :as core-project]))
+            [core-clojure.user.project :as core-project]
+            [starkinfra.utils.request :refer [access-id]]))
+
+
+(defn- signable
+  "core-clojure 0.2.0 labels every access id `project/...`, even an
+  Organization's, and stores the *parsed* private key for an Organization while
+  a Project keeps the pem. The request layer signs with the pem and the real
+  access id, so both are restored here, at the only boundary that builds a
+  user."
+  [user private-key]
+  (assoc user :private-key private-key :access-id (access-id user)))
 
 
 (defn project
@@ -21,7 +32,7 @@
   ## Return:
     - Project map"
   [environment id private-key]
-  (core-project/project environment id private-key))
+  (signable (core-project/project environment id private-key) private-key))
 
 (defn organization
   "The Organization map is an authentication entity for the SDK that
@@ -50,10 +61,11 @@
   ## Return:
     - Organization map"
   ([environment id private-key]
-   (core-organization/organization environment id private-key))
+   (organization environment id private-key nil))
 
   ([environment id private-key workspace-id]
-   (core-organization/organization environment id private-key workspace-id)))
+   (signable (core-organization/organization environment id private-key workspace-id)
+             private-key)))
 
 (defn organization-replace
   "Creates a copy of the Organization map with the altered workspace ID.
@@ -65,4 +77,5 @@
   ## Return:
     - Organization map pointing at the given Workspace"
   [organization workspace-id]
-  (core-organization/orgaization-replace organization workspace-id))
+  (let [scoped (core-organization/orgaization-replace organization workspace-id)]
+    (assoc scoped :access-id (access-id scoped))))

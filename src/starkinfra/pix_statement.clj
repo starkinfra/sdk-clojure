@@ -114,7 +114,7 @@
     - `user` [map, default nil]: Project or Organization map returned from starkinfra.user/project or starkinfra.user/organization. Only necessary if starkinfra.settings/user has not been set.
 
   ## Return:
-    - .gzip file containing a PixStatement in .csv format"
+    - .gzip file containing a PixStatement in .csv format, as a byte array"
   ([id]
    (get-content @credentials (resource) id "csv" {}))
 

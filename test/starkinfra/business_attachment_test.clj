@@ -41,6 +41,20 @@
                  (business-attachment/create [{:name "x.pdf"
                                                :content nil
                                                :content-type "application/pdf"
+                                               :business-identity-id "123"}]))))
+
+  ;; python's guard is `if not content`, so an empty string and empty bytes are
+  ;; refused exactly like a missing one
+  (testing "an empty content is refused too, string or bytes"
+    (is (thrown? IllegalArgumentException
+                 (business-attachment/create [{:name "x.pdf"
+                                               :content ""
+                                               :content-type "application/pdf"
+                                               :business-identity-id "123"}])))
+    (is (thrown? IllegalArgumentException
+                 (business-attachment/create [{:name "x.pdf"
+                                               :content (byte-array 0)
+                                               :content-type "application/pdf"
                                                :business-identity-id "123"}])))))
 
 (deftest ^:sandbox query-business-attachments

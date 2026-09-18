@@ -7,7 +7,7 @@
   route. Both checks are repeated once with a freshly fetched public key, so a
   key rotation costs one extra request instead of a rejected webhook."
   (:require [cheshire.core :as cheshire]
-            [core-clojure.utils.case :refer [cast-keys-to-kebab]]
+            [starkinfra.utils.case :refer [cast-keys-to-kebab]]
             [starkinfra.utils.json :as json]
             [starkinfra.utils.rest :as rest])
   (:import (com.starkbank.ellipticcurve Ecdsa PublicKey Signature)

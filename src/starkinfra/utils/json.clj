@@ -7,7 +7,7 @@
   `response` builders hand their output straight back to the API, and matching
   sdk-python's bytes keeps the two SDKs comparable on the wire."
   (:require [clojure.string :as string]
-            [core-clojure.utils.case :refer [kebab-to-camel]])
+            [starkinfra.utils.case :refer [kebab-to-camel]])
   (:import (java.io StringWriter)))
 
 (def ^:private escapes
@@ -134,11 +134,11 @@
   are kept, which is also what python does."
   [value]
   (cond
-    (map? value) (reduce (fn [acc [k v]]
-                           (if (nil? v)
-                             acc
-                             (assoc acc (name (kebab-to-camel k)) (api-json v))))
-                         (array-map)
-                         value)
+    ;; The array-map is built in one shot rather than assoc'd into: assoc past
+    ;; eight entries silently returns a hash map, and `response-due` would lose
+    ;; python's insertion order for the twelve keys it sends.
+    (map? value) (apply array-map
+                        (mapcat (fn [[k v]] [(kebab-to-camel k) (api-json v)])
+                                (remove (comp nil? val) value)))
     (sequential? value) (mapv api-json value)
     :else value))

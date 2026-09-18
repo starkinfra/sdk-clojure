@@ -86,7 +86,7 @@
     - `user` [map, default nil]: Project or Organization map returned from starkinfra.user/project or starkinfra.user/organization. Only necessary if starkinfra.settings/user has not been set.
 
   ## Return:
-    - IssuingDesign pdf file content"
+    - IssuingDesign pdf file content, as a byte array"
   ([id]
    (get-content @credentials (resource) id "pdf" {}))
 

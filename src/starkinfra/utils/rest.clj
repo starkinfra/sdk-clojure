@@ -1,118 +1,119 @@
 (ns starkinfra.utils.rest
-  "Thin wrappers binding the Stark Infra settings to the core REST verbs."
-  (:require [core-clojure.utils.api :refer [endpoint last-name]]
-            [core-clojure.utils.case :refer [cast-keys-to-kebab json-to-map
-                                             kebab-to-camel]]
-            [core-clojure.utils.request :refer [fetch]]
-            [core-clojure.utils.rest :as rest]
-            [starkinfra.settings :refer [api-version error-lang host sdk-version
-                                         timeout]]))
+  "The REST verbs every resource namespace calls, one per core-python
+  `utils/rest.py` function. Endpoints and envelope keys come from
+  `core-clojure.utils.api`, which agrees with core-python; everything below the
+  verb goes through `starkinfra.utils.request/fetch` and not through
+  `core-clojure.utils.rest`, whose defects that namespace documents."
+  (:require [core-clojure.utils.api :refer [endpoint last-name last-name-plural]]
+            [starkinfra.utils.case :as casing]
+            [starkinfra.utils.json :as json]
+            [starkinfra.utils.request :refer [fetch]]))
 
 
-(defn- cast-query
-  "core-clojure camelCases query keys but leaves the values of `expand` alone,
-  and the API only understands camelCased expand fields (core-python does this
-  in `url.py`). Kebab in, camel on the wire."
-  [query]
-  (if (seq (:expand query))
-    (update query :expand #(mapv (fn [field] (name (kebab-to-camel field))) %))
-    query))
-
-(defn- drop-nils
-  "python's `api_json` drops nil members before serializing a write payload;
-  core-clojure's writer keeps them, so an optional parameter left nil would
-  reach the API as an explicit null. The raw verbs deliberately skip this:
-  sdk-python sends their bodies through untouched."
-  [payload]
-  (cond
-    (map? payload) (reduce (fn [acc [k v]]
-                             (if (nil? v)
-                               acc
-                               (assoc acc k (drop-nils v))))
-                           {}
-                           payload)
-    (sequential? payload) (mapv drop-nils payload)
-    :else payload))
-
-(defn- raw-response [response]
-  {:status (:status response)
-   :content (cast-keys-to-kebab (json-to-map (:content response)))})
+(defn- fetch-json [user method path options]
+  (:content (fetch user method path options)))
 
 (defn get-page [user path query]
-  (rest/get-page host sdk-version user path (cast-query query) api-version @error-lang timeout))
+  (let [plural (last-name-plural path)
+        json (fetch-json user :get (endpoint path) {:query query})]
+    {:cursor (:cursor json)
+     :content (plural json)}))
+
+(defn- page-limit
+  "python's `min(limit, 100) if limit else limit`: nil and 0 go through
+  untouched, anything else is capped at one page."
+  [limit]
+  (if (or (nil? limit) (zero? limit))
+    limit
+    (min limit 100)))
+
+(defn- exhausted? [cursor]
+  (or (nil? cursor) (= "" cursor)))
+
+(defn- stream
+  "core-python's `get_stream` loop, request for request: one page per iteration,
+  the remaining limit shrinking by 100 whatever the page returned, and a stop on
+  an empty cursor even while a limit remains - core-clojure keeps paging there
+  and re-fetches page one, because its encoder drops the nil cursor."
+  [user path query limit]
+  (lazy-seq
+   (let [{:keys [content cursor]} (get-page user path (assoc query :limit (page-limit limit)))
+         remaining (when limit (- limit 100))]
+     (if (or (exhausted? cursor) (and remaining (<= remaining 0)))
+       content
+       (concat content (stream user path (assoc query :cursor cursor) remaining))))))
 
 (defn get-stream [user path query]
-  (rest/get-stream host sdk-version user path (cast-query query) api-version @error-lang timeout))
+  (stream user path (dissoc query :limit) (:limit query)))
 
 (defn get-id [user path id query]
-  (rest/get-id host sdk-version user path id (cast-query query) api-version @error-lang timeout))
+  (let [json (fetch-json user :get (str (endpoint path) "/" id) {:query query})]
+    (get json (keyword (last-name path)))))
 
-(defn get-content [user path id sub-resource query]
-  (rest/get-content host sdk-version user path id sub-resource (cast-query query) api-version @error-lang timeout))
+(defn get-content
+  "Raw bytes, not a String: a pdf, a csv or a gzip must survive the trip."
+  [user path id sub-resource query]
+  (:content (fetch user :get (str (endpoint path) "/" id "/" sub-resource)
+                   {:query query :as :byte-array})))
 
 (defn get-sub-resource [user path id sub-resource query]
-  (rest/get-sub-resource host sdk-version user path id sub-resource (cast-query query) api-version @error-lang timeout))
+  (fetch-json user :get (str (endpoint path) "/" id "/" (endpoint sub-resource))
+              {:query query}))
 
 (defn get-public-key [user]
-  (rest/get-public-key host sdk-version user api-version @error-lang timeout))
+  (-> (fetch-json user :get "public-key" {:query {:limit 1}})
+      :public-keys
+      first
+      :content))
 
 (defn post-multi [user path payload query]
-  (rest/post-multi host sdk-version user path (drop-nils payload) (cast-query query) api-version @error-lang timeout))
+  (let [plural (last-name-plural path)
+        json (fetch-json user :post (endpoint path)
+                         {:payload {(name plural) (mapv json/api-json payload)}
+                          :query query})]
+    (plural json)))
 
 (defn post-single [user path payload query]
-  (rest/post-single host sdk-version user path (drop-nils payload) (cast-query query) api-version @error-lang timeout))
+  (let [json (fetch-json user :post (endpoint path)
+                         {:payload (json/api-json payload) :query query})]
+    (get json (keyword (last-name path)))))
 
-(defn patch-id [user path payload id]
-  (rest/patch-id host sdk-version user path (drop-nils payload) id api-version @error-lang timeout))
+(defn patch-id
+  "python's `patch_id(resource, id, payload)`; the payload comes before the id
+  here because that is the order every resource namespace already calls it in."
+  [user path payload id]
+  (let [json (fetch-json user :patch (str (endpoint path) "/" id)
+                         {:payload (json/api-json payload)})]
+    (get json (keyword (last-name path)))))
 
 (defn delete-id
   "DELETE {endpoint}/{id} carrying an optional query map, the shape python's
-  `delete_id(**query)` has. Core's own delete-id drops the query and appends a
-  trailing slash, so this one goes straight to core's `fetch`."
+  `delete_id(**query)` has."
   [user path id query]
-  (let [response (fetch host
-                        sdk-version
-                        user
-                        :delete
-                        (str (endpoint path) "/" id)
-                        ""
-                        (cast-query query)
-                        api-version
-                        @error-lang
-                        timeout
-                        ""
-                        true)]
-    (get (cast-keys-to-kebab (json-to-map (:content response)))
-         (keyword (last-name path)))))
+  (let [json (fetch-json user :delete (str (endpoint path) "/" id) {:query query})]
+    (get json (keyword (last-name path)))))
+
+(defn- raw
+  "The `starkinfra.request` verbs: the path is taken verbatim, the body keeps
+  its nil members (python hands a raw payload straight to `json.dumps`) and no
+  status ever throws, because sdk-python passes `raiseException=False`."
+  [user method path payload query prefix throw-error]
+  (fetch user method path {:payload (casing/cast-keys-to-camel payload)
+                           :query query
+                           :prefix prefix
+                           :throw-error throw-error}))
 
 (defn get-raw [user path query prefix throw-error]
-  (rest/get-raw host sdk-version user path (cast-query query) api-version @error-lang timeout prefix throw-error))
+  (raw user :get path nil query prefix throw-error))
 
 (defn post-raw [user path payload query prefix throw-error]
-  (rest/post-raw host sdk-version user path payload (cast-query query) api-version @error-lang timeout prefix throw-error))
+  (raw user :post path payload query prefix throw-error))
 
 (defn patch-raw [user path payload query prefix throw-error]
-  (rest/patch-raw host sdk-version user path payload (cast-query query) api-version @error-lang timeout prefix throw-error))
+  (raw user :patch path payload query prefix throw-error))
 
-(defn put-raw
-  "Core's `put-raw`, not `patch-raw`: the Stark Bank template wires this one to
-  the wrong verb."
-  [user path payload query prefix throw-error]
-  (rest/put-raw host sdk-version user path payload (cast-query query) api-version @error-lang timeout prefix throw-error))
+(defn put-raw [user path payload query prefix throw-error]
+  (raw user :put path payload query prefix throw-error))
 
-(defn delete-raw
-  "Core's `delete-raw` hardcodes an empty payload and query; python's
-  `delete_raw` forwards both, so this one calls `fetch` directly."
-  [user path payload query prefix throw-error]
-  (raw-response (fetch host
-                       sdk-version
-                       user
-                       :delete
-                       path
-                       payload
-                       (cast-query query)
-                       api-version
-                       @error-lang
-                       timeout
-                       prefix
-                       throw-error)))
+(defn delete-raw [user path payload query prefix throw-error]
+  (raw user :delete path payload query prefix throw-error))

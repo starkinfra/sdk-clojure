@@ -35,11 +35,17 @@
   [^bytes content]
   (.encodeToString (Base64/getEncoder) content))
 
+(defn- blank-content?
+  "python rejects any falsy content, the empty string and empty bytes
+  included, not just a missing one."
+  [content]
+  (or (nil? content) (zero? (count content))))
+
 (defn- build-content
   "content-type is input-only: sdk-python never keeps it as an attribute of the
   built entity, so it never reaches the wire either way."
   [{:keys [content content-type] :as attachment}]
-  (when (and content-type (nil? content))
+  (when (and content-type (blank-content? content))
     (throw (IllegalArgumentException. "content is required when content-type is provided")))
   (-> (if content-type
         (assoc attachment :content (str "data:" content-type ";base64," (if (bytes? content) (encode-base64 content) content)))
@@ -69,14 +75,17 @@
 
   ## Parameters (required):
     - `id` [string]: map unique id. ex: \"5656565656565656\"
-    - `params` [map]:
-      - `:expand` [list of strings, default nil]: fields to expand information. ex: [\"content\"]
 
   ## Parameters (optional):
+    - `params` [map]:
+      - `:expand` [list of strings, default nil]: fields to expand information. ex: [\"content\"]
     - `user` [map, default nil]: Project or Organization map returned from starkinfra.user/project or starkinfra.user/organization. Only necessary if starkinfra.settings/user has not been set.
 
   ## Return:
     - BusinessAttachment map with updated attributes"
+  ([id]
+   (get-id @credentials (resource) id {}))
+
   ([id params]
    (get-id @credentials (resource) id params))
 

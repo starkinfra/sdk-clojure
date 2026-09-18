@@ -213,7 +213,7 @@
     - `user` [map, default nil]: Project or Organization map returned from starkinfra.user/project or starkinfra.user/organization. Only necessary if starkinfra.settings/user has not been set.
 
   ## Return:
-    - CreditNote pdf file content"
+    - CreditNote pdf file content, as a byte array"
   ([note-id]
    (get-content @credentials (resource) note-id "/pdf" {}))
 
@@ -230,7 +230,7 @@
     - `user` [map, default nil]: Project or Organization map returned from starkinfra.user/project or starkinfra.user/organization. Only necessary if starkinfra.settings/user has not been set.
 
   ## Return:
-    - CreditNote payment pdf file content"
+    - CreditNote payment pdf file content, as a byte array"
   ([note-id]
    (get-content @credentials (resource) note-id "payment/pdf" {}))
 

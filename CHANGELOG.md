@@ -37,5 +37,10 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 - credit-note (pdf, payment), credit-signer (resend-token), credit-preview, credit-holmes, ledger and ledger-transaction resources, with their logs
 - individual-identity, individual-account-request, individual-account-attachment, business-identity, business-attachment and business-account-request resources, with their logs
 - README usage sections for every resource, mirroring the sdk-python README
+### Changed
+- the SDK owns its HTTP layer: `starkinfra.utils.request` (URL, query encoding, signing, status mapping) and `starkinfra.utils.case` replace `core-clojure.utils.request` and `core-clojure.utils.case`, which are kept only for user validation, key generation and the endpoint/envelope helpers. core-clojure 0.2.0 dropped falsy query members (`{:is-delivered false}` never reached the URL), prefixed the query string with `/?`, raised `IllegalArgumentException: No matching clause` for any status other than 400 or 500, signed an Organization as `project/<id>` so a Workspace scope was lost, returned raw pdf/csv bodies as Strings, split camelCase only on letter boundaries (`displayName1` arrived as `:displayname1`), and paged with arithmetic that sent a `limit=0` request and re-fetched page one on an empty cursor. Each of those is now mirrored from core-python
+- `pdf`, `payment` and `csv` return a `byte[]` instead of a String, so binary content survives
+- API errors throw `ex-info` whose `ex-data` carries `:status` alongside `:errors`, for every status
+
 ### Notes
 - mirrors sdk-python at 271c190d, which removed IndividualDocument the day this SDK was derived, so that resource is not included
