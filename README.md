@@ -78,6 +78,14 @@ This SDK version is compatible with the Stark Infra API v2.
         - [BusinessIdentity](#create-businessidentities): Create business identities
         - [BusinessAttachment](#create-businessattachments): Create business attachments
         - [BusinessAccountRequest](#create-businessaccountrequests): Create business account requests
+    - [AI](#ai)
+        - [AiKnowledgeBase](#create-an-aiknowledgebase): Turn a website into knowledge your agents can answer from
+        - [AiVoice](#create-an-aivoice): Clone a voice from a recording
+        - [AiSpeech](#create-an-aispeech): Read a text out loud with a cloned voice
+        - [AiTranscript](#create-an-aitranscript): Transcribe an audio file
+        - [AiAgent](#create-an-aiagent): Configure an assistant with a model, instructions, knowledge and a voice
+        - [AiChat](#create-an-aichat): Open a conversation thread with an agent
+        - [AiMessage](#create-an-aimessage): Post a message and receive the agent's answer
     - [Webhook](#webhook):
         - [Webhook](#create-a-webhook-subscription): Configure your webhook endpoints and subscriptions
         - [WebhookEvents](#process-webhook-events): Manage Webhook events
@@ -3999,6 +4007,405 @@ You can also get a specific log by its id.
 (def log (log/get "5155165527080960"))
 
 (println log)
+```
+
+## AI
+
+### Create an AiKnowledgeBase
+
+An AiKnowledgeBase turns a website into material an agent can read. Stark Infra crawls the root URL, follows its
+links, converts every page to Markdown and indexes it. The call returns at once with the base in "processing" status.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-knowledge-base :as ai-knowledge-base]))
+
+(def knowledge-base
+  (ai-knowledge-base/create
+    {:name "Product Documentation"
+     :root-url "https://docs.starkinfra.com"
+     :is-recursive false
+     :tags ["support" "public"]}))
+
+(println knowledge-base)
+```
+
+### Get an AiKnowledgeBase
+
+Poll a knowledge base by its id until its status leaves "processing".
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-knowledge-base :as ai-knowledge-base]))
+
+(def knowledge-base (ai-knowledge-base/get "5155165527080960"))
+
+(println knowledge-base)
+```
+
+### Query AiKnowledgeBases
+
+You can list your knowledge bases, optionally filtered by ids, by a substring of the name or by status.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-knowledge-base :as ai-knowledge-base]))
+
+(def knowledge-bases (ai-knowledge-base/query {:name "documentation" :status "success"}))
+
+(doseq [knowledge-base knowledge-bases]
+  (println knowledge-base))
+```
+
+### Update an AiKnowledgeBase
+
+Rename a knowledge base, retag it or change whether its crawl is recursive. The root URL cannot be changed.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-knowledge-base :as ai-knowledge-base]))
+
+(def knowledge-base
+  (ai-knowledge-base/update "5155165527080960" {:name "Public Documentation" :tags ["support"]}))
+
+(println knowledge-base)
+```
+
+### List the pages of an AiKnowledgeBase
+
+Get every page the crawler has seen, grouped by host, with the status of each one.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-knowledge-base :as ai-knowledge-base]))
+
+(def hosts (ai-knowledge-base/hosts "5155165527080960"))
+
+(println hosts)
+```
+
+### Delete AiKnowledgeBases
+
+Delete up to 100 knowledge bases at once. Agents that still reference a deleted base simply retrieve nothing from it.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-knowledge-base :as ai-knowledge-base]))
+
+(def knowledge-bases (ai-knowledge-base/delete ["5155165527080960" "4545454545454545"]))
+
+(doseq [knowledge-base knowledge-bases]
+  (println knowledge-base))
+```
+
+### Create an AiVoice
+
+An AiVoice is a voice cloned from a recording you upload. Cloning is asynchronous: the voice is created in "processing" status and moves to "success" when it is ready to speak. Voices cannot be deleted in the Sandbox.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-voice :as ai-voice]))
+
+(def voice
+  (ai-voice/create
+    {:audio "SUQzBAAAAAAA..."
+     :name "Helena"
+     :description "Calm voice"
+     :language "portuguese"
+     :gender "female"}))
+
+(println voice)
+```
+
+### Query AiVoices
+
+You can list your voices. The route is not paginated and takes no filters.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-voice :as ai-voice]))
+
+(def voices (ai-voice/query))
+
+(doseq [voice voices]
+  (println voice))
+```
+
+### Delete AiVoices
+
+Delete up to 100 voices at once.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-voice :as ai-voice]))
+
+(def voices (ai-voice/delete ["5155165527080960" "4545454545454545"]))
+
+(doseq [voice voices]
+  (println voice))
+```
+
+### Create an AiSpeech
+
+An AiSpeech is one text read out loud by an AiVoice. It is synthesized during the call and comes back as a base64 MP3 in the audio attribute. Speeches cannot be deleted.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-speech :as ai-speech]))
+
+(def speech
+  (ai-speech/create
+    {:voice-id "5155165527080960"
+     :text "Hello, how can I help you?"}))
+
+(println speech)
+```
+
+### Get an AiSpeech
+
+Get a speech by its id. The audio comes with it unless you list the fields you want and leave :audio out.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-speech :as ai-speech]))
+
+(def speech (ai-speech/get "5155165527080960" {:expand [:voice-name]}))
+
+(println speech)
+```
+
+### Query AiSpeeches
+
+You can list your speeches. The audio is left out of the results. The route accepts only fields and expand.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-speech :as ai-speech]))
+
+(def speeches (ai-speech/query {:fields [:id :status :voice-name] :expand [:voice-name]}))
+
+(doseq [speech speeches]
+  (println speech))
+```
+
+### Create an AiTranscript
+
+An AiTranscript is the text of an audio file you upload. It is transcribed during the call. Transcripts cannot be deleted.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-transcript :as ai-transcript]))
+
+(def transcript (ai-transcript/create {:audio "SUQzBAAAAAAA..."}))
+
+(println transcript)
+```
+
+### Query AiTranscripts
+
+You can list your transcripts. The route is not paginated and takes no filters.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-transcript :as ai-transcript]))
+
+(def transcripts (ai-transcript/query))
+
+(doseq [transcript transcripts]
+  (println transcript))
+```
+
+### Create an AiAgent
+
+An AiAgent is the configuration of an assistant: the model, the instructions, the knowledge it may consult and the voice it speaks with. The keys of the metadata schema are yours and are sent exactly as written.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-agent :as ai-agent]))
+
+(def agent
+  (ai-agent/create
+    {:name "Support assistant"
+     :model "bender-1.0"
+     :system-prompt "Answer in one short sentence."
+     :knowledge-base-ids ["5155165527080960"]
+     :metadata-schema {:order_id {:type "string" :description "Order the customer mentions"}}}))
+
+(println agent)
+```
+
+### Get an AiAgent
+
+Get an agent by its id. Ask to expand the knowledge bases to receive them instead of only their ids.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-agent :as ai-agent]))
+
+(def agent (ai-agent/get "5155165527080960" {:expand [:knowledge-bases]}))
+
+(println agent)
+```
+
+### Query AiAgents
+
+You can list your agents. The route accepts only fields and expand.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-agent :as ai-agent]))
+
+(def agents (ai-agent/query {:fields [:id :name]}))
+
+(doseq [agent agents]
+  (println agent))
+```
+
+### Update an AiAgent
+
+Change only the parameters you give. The API clears the knowledge bases of an update that carries none, so when you leave :knowledge-base-ids out the SDK reads the agent first and sends its current list back. Pass an empty list to clear them on purpose.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-agent :as ai-agent]))
+
+(def agent (ai-agent/update "5155165527080960" {:name "Billing assistant"}))
+
+(println agent)
+```
+
+### Delete AiAgents
+
+Delete up to 100 agents at once.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-agent :as ai-agent]))
+
+(def agents (ai-agent/delete ["5155165527080960" "4545454545454545"]))
+
+(doseq [agent agents]
+  (println agent))
+```
+
+### Create an AiChat
+
+An AiChat is one conversation thread with an agent and holds the history. When you leave the title out, the first message generates one.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-chat :as ai-chat]))
+
+(def chat
+  (ai-chat/create
+    {:agent-id "5155165527080960"
+     :title "Order 123"}))
+
+(println chat)
+```
+
+### Get an AiChat
+
+Get a chat by its id. Ask to expand the agent name to receive it with the chat.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-chat :as ai-chat]))
+
+(def chat (ai-chat/get "5155165527080960" {:expand [:agent-name]}))
+
+(println chat)
+```
+
+### Query AiChats
+
+You can list your chats. The route accepts only fields and expand.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-chat :as ai-chat]))
+
+(def chats (ai-chat/query {:fields [:id :title]}))
+
+(doseq [chat chats]
+  (println chat))
+```
+
+### Update an AiChat
+
+Rename a chat or hand it over to another agent.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-chat :as ai-chat]))
+
+(def chat (ai-chat/update "5155165527080960" {:title "Order 124"}))
+
+(println chat)
+```
+
+### Delete AiChats
+
+Delete up to 100 chats at once, with their messages.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-chat :as ai-chat]))
+
+(def chats (ai-chat/delete ["5155165527080960" "4545454545454545"]))
+
+(doseq [chat chats]
+  (println chat))
+```
+
+### Create an AiMessage
+
+Post what the user said. The call waits for the agent, which takes a few seconds, and returns the user's message and the agent's answer, which the API sends as "system". Ask to expand the chat name to receive the title the first turn generates.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-message :as ai-message]))
+
+(def messages
+  (ai-message/create
+    {:chat-id "5155165527080960"
+     :text "What is the status of order 123?"}
+    {:expand [:chat-name]}))
+
+(doseq [message messages]
+  (println message))
+```
+
+### Query AiMessages
+
+You can read the whole history of a chat. The stream follows the cursor until the history ends.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-message :as ai-message]))
+
+(def messages (ai-message/query "5155165527080960" {:limit 35}))
+
+(doseq [message messages]
+  (println message))
+```
+
+### Get paged AiMessages
+
+You can get up to 100 messages of a chat per request and the cursor of the next page.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.ai-message :as ai-message]))
+
+(def page (ai-message/page "5155165527080960" {:limit 10}))
+
+(println (:cursor page))
+
+(def next-page (ai-message/page "5155165527080960" {:cursor (:cursor page) :limit 10}))
+
+(doseq [message (:content next-page)]
+  (println message))
 ```
 
 ## Webhook

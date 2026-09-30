@@ -179,6 +179,7 @@
     - `:prefix` [string, default nil]: User-Agent prefix. ex: \"Joker\"
     - `:throw-error` [boolean, default true]: false returns every status as data
     - `:as` [keyword, default nil]: `:byte-array` for raw content routes
+    - `:empty-object` [boolean, default nil]: send `{}` for an empty payload map instead of no body, for the PATCH routes that reject a missing body
 
   ## Return:
     - map with `:status` and `:content`, `:content` being the parsed kebab-keyed
@@ -186,9 +187,9 @@
       `:as :byte-array` was asked for"
   [user method path options]
   (validate (:private-key user) (:environment user))
-  (let [{:keys [payload query prefix as]} options
+  (let [{:keys [payload query prefix as empty-object]} options
         throw-error (get options :throw-error true)
-        body (request-body payload)
+        body (if (and empty-object (= {} payload)) "{}" (request-body payload))
         timeout-ms (* 1000 timeout)
         response (try
                    (client/request (cond-> {:method method
