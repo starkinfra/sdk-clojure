@@ -5,12 +5,16 @@
             [starkinfra.pix-request :as pix-request]
             [starkinfra.settings :as settings]
             [starkinfra.user :as user]
+            [starkinfra.utils.bacen-id :as bacen-id]
             [starkinfra.utils.case :as casing]
             [starkinfra.utils.end-to-end-id :as end-to-end-id]
             [starkinfra.utils.json :as json]
+            [starkinfra.utils.pix-subscription-bacen-id :as pix-subscription-bacen-id]
             [starkinfra.utils.rest]
             [starkinfra.utils.return-id :as return-id])
-  (:import (com.starkbank.ellipticcurve PrivateKey)))
+  (:import (com.starkbank.ellipticcurve PrivateKey)
+           (java.time ZoneOffset ZonedDateTime)
+           (java.time.format DateTimeFormatter)))
 
 (def ^:private bacen-id-pattern #"^\d{8}\d{12}[A-Za-z0-9]{11}$")
 
@@ -28,9 +32,23 @@
       (is (= 32 (count id)))
       (is (re-matches #"^D\d{8}\d{12}[A-Za-z0-9]{11}$" id)))))
 
+(deftest pix-subscription-bacen-id-shape
+  (testing "a Pix subscription bacen id is the prefix, the bank code, the UTC day and 11 random characters"
+    (let [id (pix-subscription-bacen-id/create "32160637" "RR")
+          today (.format (ZonedDateTime/now ZoneOffset/UTC) (DateTimeFormatter/ofPattern "yyyyMMdd"))]
+      (is (= 29 (count id)))
+      (is (re-matches #"^RR32160637\d{8}[A-Za-z0-9]{11}$" id))
+      (is (= today (subs id 10 18))))))
+
+(deftest bacen-id-date-format
+  (testing "the default stays at minute precision and a format arity shortens it"
+    (is (= 31 (count (bacen-id/create "20018183"))))
+    (is (= 27 (count (bacen-id/create "20018183" "yyyyMMdd"))))))
+
 (deftest bacen-ids-are-random
   (testing "two ids created in the same minute differ"
-    (is (not= (end-to-end-id/create "20018183") (end-to-end-id/create "20018183")))))
+    (is (not= (end-to-end-id/create "20018183") (end-to-end-id/create "20018183")))
+    (is (not= (pix-subscription-bacen-id/create "20018183" "RR") (pix-subscription-bacen-id/create "20018183" "RR")))))
 
 (deftest canonical-json-matches-python-dumps
   (testing "separators, key order and escaping"

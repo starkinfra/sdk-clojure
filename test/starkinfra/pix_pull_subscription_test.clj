@@ -3,13 +3,13 @@
   (:require [clojure.test :refer [deftest is testing]]
             [starkinfra.pix-pull-subscription :as pix-pull-subscription]
             [starkinfra.pix-pull-subscription.log :as log]
-            [starkinfra.utils.bacen-id :as bacen-id]
             [starkinfra.utils.date :as date]
             [starkinfra.utils.page :as page]
+            [starkinfra.utils.pix-subscription-bacen-id :as pix-subscription-bacen-id]
             [starkinfra.utils.user :refer [bank-code set-project]]))
 
 (defn- example-subscription []
-  {:bacen-id (str "RR" (bacen-id/create (bank-code)))
+  {:bacen-id (pix-subscription-bacen-id/create (bank-code) "RR")
    :external-id (str "clojure-sdk-" (rand-int 1000000000))
    :installment-start (date/future-datetime)
    :interval "month"
@@ -20,7 +20,6 @@
    :sender-account-number "876543-2"
    :sender-bank-code (bank-code)
    :sender-branch-code "1357-9"
-   :sender-city-code "3550308"
    :sender-tax-id "39908427000128"
    :type "push"
    :amount (+ 1000 (rand-int 999000))
