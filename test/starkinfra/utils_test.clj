@@ -199,3 +199,14 @@
            (casing/cast-keys-to-camel {:reason "fraud" :name nil})))
     (is (= {"isSent" false} (casing/cast-keys-to-camel {:is-sent false})))
     (is (nil? (casing/cast-keys-to-camel nil)))))
+
+(deftest cast-keys-to-kebab-keeps-preserved-attributes-as-written
+  (let [wire {:agentName "x" :metadataSchema {:order_id {:isUrgent 1} "snake-key" 2} :other {:innerKey 3}}]
+    (testing "one argument rewrites every level"
+      (is (= {:agent-name "x" :metadata-schema {:order_id {:is-urgent 1} :snake-key 2} :other {:inner-key 3}}
+             (casing/cast-keys-to-kebab wire))))
+    (testing "a preserved attribute keeps its nested keys exactly"
+      (is (= {:agent-name "x" :metadata-schema {:order_id {:isUrgent 1} "snake-key" 2} :other {:inner-key 3}}
+             (casing/cast-keys-to-kebab wire #{:metadata-schema}))))
+    (testing "an empty preserved set behaves as the one-argument form"
+      (is (= (casing/cast-keys-to-kebab wire) (casing/cast-keys-to-kebab wire #{}))))))

@@ -133,19 +133,19 @@
     (bytes? body) (String. ^bytes body "UTF-8")
     :else (str body)))
 
-(defn- parse-json [text]
+(defn- parse-json [text preserved]
   (try
     (let [parsed (cheshire/parse-string text true)]
       (when (coll? parsed)
-        (casing/cast-keys-to-kebab parsed)))
+        (casing/cast-keys-to-kebab parsed preserved)))
     (catch Exception _
       nil)))
 
-(defn- decoded-content [response raw-bytes?]
+(defn- decoded-content [response raw-bytes? preserved]
   (if raw-bytes?
     (:body response)
     (let [text (body-string (:body response))]
-      (or (parse-json text) text))))
+      (or (parse-json text preserved) text))))
 
 (defn- fail
   "core-python's error mapping: 500 is always the same message, 400 carries the
@@ -158,7 +158,7 @@
                                :message "Houston, we have a problem."}]})))
   (when (= 400 status)
     (throw (ex-info text
-                    (assoc (or (parse-json text)
+                    (assoc (or (parse-json text #{})
                                {:errors [{:code "unknownError" :message text}]})
                            :status 400))))
   (throw (ex-info (str "Unknown exception encountered: " text)
@@ -179,6 +179,7 @@
     - `:prefix` [string, default nil]: User-Agent prefix. ex: \"Joker\"
     - `:throw-error` [boolean, default true]: false returns every status as data
     - `:as` [keyword, default nil]: `:byte-array` for raw content routes
+    - `:preserve` [set of keywords, default nil]: kebab names of the response attributes whose nested keys belong to the caller and must come back exactly as the API wrote them. ex: #{:metadata-schema}
 
   ## Return:
     - map with `:status` and `:content`, `:content` being the parsed kebab-keyed
@@ -186,7 +187,7 @@
       `:as :byte-array` was asked for"
   [user method path options]
   (validate (:private-key user) (:environment user))
-  (let [{:keys [payload query prefix as]} options
+  (let [{:keys [payload query prefix as preserve]} options
         throw-error (get options :throw-error true)
         body (request-body payload)
         timeout-ms (* 1000 timeout)
@@ -217,4 +218,4 @@
         status (:status response)]
     (when (and throw-error (not= 200 status))
       (fail status (body-string (:body response))))
-    {:status status :content (decoded-content response (= :byte-array as))}))
+    {:status status :content (decoded-content response (= :byte-array as) (or preserve #{}))}))
