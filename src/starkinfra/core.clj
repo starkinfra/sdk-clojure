@@ -2,6 +2,13 @@
   "SDK to facilitate Clojure integrations with the Stark Infra API."
   (:refer-clojure :exclude [get set update])
   (:require
+   [starkinfra.ai-agent]
+   [starkinfra.ai-chat]
+   [starkinfra.ai-knowledge-base]
+   [starkinfra.ai-message]
+   [starkinfra.ai-speech]
+   [starkinfra.ai-transcript]
+   [starkinfra.ai-voice]
    [starkinfra.brcode-preview]
    [starkinfra.brcode-preview.subscription]
    [starkinfra.business-account-request]
