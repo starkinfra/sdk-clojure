@@ -4,32 +4,39 @@
             [starkinfra.pix-internal-transaction-report :as report]
             [starkinfra.pix-internal-transaction-report.log :as log]
             [starkinfra.utils.date :as date]
+            [starkinfra.utils.end-to-end-id :as end-to-end-id]
             [starkinfra.utils.page :as page]
-            [starkinfra.utils.user :refer [set-project]]))
+            [starkinfra.utils.return-id :as return-id]
+            [starkinfra.utils.user :refer [bank-code set-project]]))
 
-(defn- example-report []
-  {:amount 10000
-   :created (date/future-datetime)
-   :end-to-end-id "E12345678202401011234567890123456"
-   :method "manual"
-   :reference-type "request"
-   :sender-account-number "12345"
-   :sender-branch-code "0001"
+(defn- accepted-report [reference-type]
+  {:amount (+ 100 (rand-int 999900))
+   :created (date/future-datetime (- (inc (rand-int 2))))
+   :end-to-end-id (end-to-end-id/create (bank-code))
+   :method (if (= reference-type "reversal") "dict" "manual")
+   :reference-type reference-type
+   :sender-account-number "00000-0"
+   :sender-branch-code "0000"
    :sender-account-type "checking"
-   :sender-bank-code "12345678"
-   :sender-tax-id "123.456.789-01"
-   :receiver-account-number "67890"
+   :sender-bank-code (bank-code)
+   :sender-tax-id "012.345.678-90"
+   :receiver-account-number "00000-1"
    :receiver-branch-code "0001"
-   :receiver-account-type "savings"
-   :receiver-bank-code "87654321"
-   :receiver-tax-id "987.654.321-00"
-   :receiver-key-id "user@example.com"})
+   :receiver-account-type "checking"
+   :receiver-bank-code (rand-nth ["18236120" "60701190" "20018183"])
+   :receiver-tax-id "012.345.678-90"})
+
+(defn- example-request []
+  (assoc (accepted-report "request") :receiver-key-id "+5511989898989"))
+
+(defn- example-reversal [generated-return-id]
+  (assoc (accepted-report "reversal") :return-id generated-return-id))
 
 
 (deftest ^:sandbox create-and-get-pix-internal-transaction-reports
   (set-project)
   (testing "every created report can be retrieved by its id"
-    (let [reports (report/create [(example-report)])]
+    (let [reports (report/create [(example-request)])]
       (doseq [r reports]
         (is (= (:id r) (:id (report/get (:id r)))))))))
 
@@ -54,3 +61,21 @@
 
   (testing "two pages of two log ids never repeat an id"
     (is (= 4 (count (page/get-ids #(log/page %) 2 {:limit 2}))))))
+
+(deftest ^:sandbox create-pix-internal-transaction-report-request
+  (set-project)
+  (testing "a request report with valid ids is created"
+    (let [[created] (report/create [(example-request)])]
+      (is (some? (:id created)))
+      (is (= "request" (:reference-type created))))))
+
+(deftest ^:sandbox create-pix-internal-transaction-report-reversal
+  (set-project)
+  (testing "a reversal report carrying a library-generated return id is created"
+    (let [generated-return-id (return-id/create (bank-code))]
+      (is (some? generated-return-id))
+      (is (= 32 (count generated-return-id)))
+      (is (.startsWith ^String generated-return-id "D"))
+      (let [[created] (report/create [(example-reversal generated-return-id)])]
+        (is (some? (:id created)))
+        (is (= "reversal" (:reference-type created)))))))
