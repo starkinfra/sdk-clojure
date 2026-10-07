@@ -17,8 +17,9 @@
     - `:status` [string]: current PixKeyHolmes status. ex: \"created\", \"solving\", \"solved\", \"failed\"
     - `:created` [string]: creation datetime for the PixKeyHolmes. ex: \"2020-03-10T10:30:00.000000+00:00\"
     - `:updated` [string]: latest update datetime for the PixKeyHolmes. ex: \"2020-03-10T10:30:00.000000+00:00\""
+  (:refer-clojure :exclude [get])
   (:require [starkinfra.settings :refer [credentials]]
-            [starkinfra.utils.rest :refer [get-page get-stream post-multi]]))
+            [starkinfra.utils.rest :refer [get-id get-page get-stream post-multi]]))
 
 (defn- resource []
   "pix-key-holmes")
@@ -40,6 +41,23 @@
 
   ([holmes user]
    (post-multi user (resource) holmes {})))
+
+(defn get
+  "Receive a single PixKeyHolmes map previously created in the Stark Infra API by its id.
+
+  ## Parameters (required):
+    - `id` [string]: map unique id. ex: \"5656565656565656\"
+
+  ## Parameters (optional):
+    - `user` [map, default nil]: Project or Organization map returned from starkinfra.user/project or starkinfra.user/organization. Only necessary if starkinfra.settings/user has not been set.
+
+  ## Return:
+    - PixKeyHolmes map with updated attributes"
+  ([id]
+   (get-id @credentials (resource) id {}))
+
+  ([id user]
+   (get-id user (resource) id {})))
 
 (defn query
   "Receive a stream of PixKeyHolmes maps previously created in the Stark Infra API.
