@@ -14,7 +14,7 @@
   ## Attributes (return-only):
     - `:id` [string]: unique id returned when the PixKeyHolmes is created. ex: \"5656565656565656\"
     - `:result` [string]: result of the investigation. Options: \"registered\", \"unregistered\". Empty/nil until status is \"solved\".
-    - `:status` [string]: current PixKeyHolmes status. ex: \"created\", \"solving\", \"solved\", \"failed\"
+    - `:status` [string]: current PixKeyHolmes status. ex: \"solving\", \"solved\"
     - `:created` [string]: creation datetime for the PixKeyHolmes. ex: \"2020-03-10T10:30:00.000000+00:00\"
     - `:updated` [string]: latest update datetime for the PixKeyHolmes. ex: \"2020-03-10T10:30:00.000000+00:00\""
   (:refer-clojure :exclude [get])
@@ -66,7 +66,7 @@
     - `:limit` [integer, default nil]: maximum number of maps to be retrieved. Unlimited if nil. ex: 35
     - `:after` [string, default nil]: date filter for maps created only after specified date. ex: \"2020-03-10\"
     - `:before` [string, default nil]: date filter for maps created only before specified date. ex: \"2020-03-10\"
-    - `:status` [list of strings, default nil]: filter for status of retrieved maps. ex: [\"created\", \"solving\", \"solved\", \"failed\"]
+    - `:status` [list of strings, default nil]: filter for status of retrieved maps. ex: [\"solving\", \"solved\"]
     - `:tags` [list of strings, default nil]: tags to filter retrieved maps. ex: [\"tony\", \"stark\"]
     - `:ids` [list of strings, default nil]: list of ids to filter retrieved maps. ex: [\"5656565656565656\", \"4545454545454545\"]
     - `user` [map, default nil]: Project or Organization map returned from starkinfra.user/project or starkinfra.user/organization. Only necessary if starkinfra.settings/user has not been set.
@@ -91,7 +91,7 @@
     - `:limit` [integer, default 100]: maximum number of maps to be retrieved. It must be an integer between 1 and 100. ex: 50
     - `:after` [string, default nil]: date filter for maps created only after specified date. ex: \"2020-03-10\"
     - `:before` [string, default nil]: date filter for maps created only before specified date. ex: \"2020-03-10\"
-    - `:status` [list of strings, default nil]: filter for status of retrieved maps. ex: [\"created\", \"solving\", \"solved\", \"failed\"]
+    - `:status` [list of strings, default nil]: filter for status of retrieved maps. ex: [\"solving\", \"solved\"]
     - `:tags` [list of strings, default nil]: tags to filter retrieved maps. ex: [\"tony\", \"stark\"]
     - `:ids` [list of strings, default nil]: list of ids to filter retrieved maps. ex: [\"5656565656565656\", \"4545454545454545\"]
     - `user` [map, default nil]: Project or Organization map returned from starkinfra.user/project or starkinfra.user/organization. Only necessary if starkinfra.settings/user has not been set.
