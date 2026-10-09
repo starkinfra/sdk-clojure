@@ -46,6 +46,35 @@
 (defn get-stream [user path query]
   (stream user path (dissoc query :limit) (:limit query)))
 
+(defn get-keyed-page
+  "`get-page` for a route that answers its list under `response-key`, which
+  is not what `last-name-plural` derives (AiSpeech answers \"speeches\"), or
+  whose entities carry maps keyed by the caller: `preserve` names those
+  attributes, see `starkinfra.utils.request/fetch`."
+  [user path query response-key preserve]
+  (let [json (fetch-json user :get (endpoint path) {:query query :preserve preserve})]
+    {:cursor (:cursor json)
+     :content (response-key json)}))
+
+(defn- keyed-stream
+  "Follows the cursor until it runs out, through pages that come back empty,
+  and counts what was received instead of what was asked for, so a limit is
+  honoured whatever the page sizes were: each request asks for the smaller of
+  what remains and 100."
+  [user path query response-key preserve remaining]
+  (lazy-seq
+   (let [page-query (assoc query :limit (when remaining (min remaining 100)))
+         {:keys [content cursor]} (get-keyed-page user path page-query response-key preserve)
+         left (when remaining (- remaining (count content)))]
+     (if (or (exhausted? cursor) (and left (<= left 0)))
+       content
+       (concat content (keyed-stream user path (assoc query :cursor cursor) response-key preserve left))))))
+
+(defn get-keyed-stream
+  "`get-stream` over `get-keyed-page`."
+  [user path query response-key preserve]
+  (keyed-stream user path (dissoc query :limit) response-key preserve (:limit query)))
+
 (defn get-id [user path id query]
   (let [json (fetch-json user :get (str (endpoint path) "/" id) {:query query})]
     (get json (keyword (last-name path)))))

@@ -41,14 +41,23 @@
 
 (defn cast-keys-to-kebab
   "Recursively rewrites every map key of a parsed API response as a kebab
-  keyword. Values, nils included, are untouched."
-  [value]
-  (cond
-    (map? value) (reduce-kv (fn [acc k v] (assoc acc (kebab-key k) (cast-keys-to-kebab v)))
-                            {}
-                            value)
-    (sequential? value) (mapv cast-keys-to-kebab value)
-    :else value))
+  keyword. Values, nils included, are untouched. The value of an attribute
+  whose kebab name is in `preserved` is left exactly as the API wrote it, for
+  the maps whose keys belong to the caller."
+  ([value]
+   (cast-keys-to-kebab value #{}))
+
+  ([value preserved]
+   (cond
+     (map? value) (reduce-kv (fn [acc k v]
+                               (let [attribute (kebab-key k)]
+                                 (assoc acc attribute (if (contains? preserved attribute)
+                                                        v
+                                                        (cast-keys-to-kebab v preserved)))))
+                             {}
+                             value)
+     (sequential? value) (mapv #(cast-keys-to-kebab % preserved) value)
+     :else value)))
 
 (defn cast-keys-to-camel
   "Recursively rewrites every map key as a camelCase string, keeping nil
