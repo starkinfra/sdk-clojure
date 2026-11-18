@@ -1861,6 +1861,52 @@ You can query multiple PixKeyHolmes according to filters.
   (println sherlock))
 ```
 
+### Get a PixKeyHolmes
+
+After its creation, information on a PixKeyHolmes may be retrieved by its id.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.pix-key-holmes :as pix-key-holmes]))
+
+(def sherlock (pix-key-holmes/get "5656565656565656"))
+
+(println sherlock)
+```
+
+### Query PixKeyHolmes logs
+
+You can query PixKeyHolmes logs to better understand PixKeyHolmes life cycles.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.pix-key-holmes.log :as log]))
+
+(def logs (log/query
+            {:limit 50
+             :ids ["5729405850615808"]
+             :after "2022-01-01"
+             :before "2022-01-20"
+             :types ["solved"]
+             :holmes-ids ["5719405850615809"]}))
+
+(doseq [log logs]
+  (println log))
+```
+
+### Get a PixKeyHolmes log
+
+You can also get a specific log by its id.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.pix-key-holmes.log :as log]))
+
+(def log (log/get "5155165527080960"))
+
+(println log)
+```
+
 ### Create a PixDirector
 
 To register the Pix director contact information at the Central Bank, run the following:

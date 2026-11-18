@@ -82,6 +82,7 @@
    [starkinfra.pix-key]
    [starkinfra.pix-key.log]
    [starkinfra.pix-key-holmes]
+   [starkinfra.pix-key-holmes.log]
    [starkinfra.pix-pull-request]
    [starkinfra.pix-pull-request.log]
    [starkinfra.pix-pull-subscription]
