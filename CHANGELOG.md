@@ -14,6 +14,7 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 
 ## [Unreleased]
 ### Added
+- AiKnowledgeBase, AiVoice, AiSpeech, AiTranscript, AiAgent, AiChat and AiMessage resources
 - project skeleton over com.starkinfra/starkcore 0.2.0, with a `:sandbox` test selector so the offline suite is the default
 - starkinfra.settings with the Stark Infra host, api version, timeout, default user and error language
 - starkinfra.user with project, organization and organization-replace

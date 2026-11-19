@@ -6,8 +6,7 @@
   boundary, so the API's `displayName1` arrives as `:displayname1` while every
   docstring in this SDK promises `:display-name-1`, and its `kebab-to-camel`
   returns a keyword where the wire wants a string. core-python's rule, mirrored
-  here, puts a boundary before every non-initial uppercase letter *or digit*.
-  Drop this namespace once core-clojure adopts it."
+  here, puts a boundary before every non-initial uppercase letter *or digit*."
   (:require [clojure.string :as string]))
 
 ;; core-python's `case.py` pattern is `(?<!^)(?=[A-Z0-9])`; `(?<=.)` is the same
