@@ -33,9 +33,22 @@
               :tax-id "012.345.678-90"
               :nominal-amount amount
               :scheduled (date/future-date 30)
-              :invoices [{:amount (quot amount 2) :due (date/future-date 60)}
-                        {:amount (quot amount 2) :due (date/future-date 90)}]}}))
+              ;; installments must add up to more than nominal-amount, or the API rejects a non-positive interest
+              :invoices [{:amount (quot (* amount 11) 20) :due (date/future-date 60)}
+                        {:amount (quot (* amount 11) 20) :due (date/future-date 90)}]}}))
 
+
+(defn- amount-preview [type field value]
+  {:type "credit-note"
+   :credit (merge {:type type
+                   :tax-id "012.345.678-90"
+                   field value
+                   :nominal-interest 12.5
+                   :scheduled (date/future-date (+ 11 (rand-int 9)))
+                   :initial-due (date/future-date (+ 30 (rand-int 10)))}
+                  ;; bullet has a single installment, and the API rejects an interval for it
+                  (when (not= "bullet" type)
+                    {:count 12 :interval "month"}))})
 
 (deftest ^:sandbox create-credit-previews
   (set-project)
@@ -44,3 +57,20 @@
       (is (= 3 (count previews)))
       (is (every? #(= "credit-note" (:type %)) previews))
       (is (= ["sac" "bullet" "custom"] (map #(get-in % [:credit :type]) previews))))))
+
+
+(deftest ^:sandbox create-credit-previews-with-nominal-amount-or-amount
+  (set-project)
+  (testing "the API computes nominal-amount from amount and amount from nominal-amount"
+    (let [value (+ 100000 (rand-int 900000))
+          cases (for [field [:amount :nominal-amount]
+                      type ["sac" "price" "american" "bullet"]]
+                  [type field])
+          previews (credit-preview/create (map (fn [[type field]] (amount-preview type field value)) cases))]
+      (is (= (count cases) (count previews)))
+      (doseq [[[type field] preview] (map vector cases previews)
+              :let [credit (:credit preview)
+                    computed (if (= :amount field) :nominal-amount :amount)]]
+        (is (= type (:type credit)))
+        (is (= value (get credit field)))
+        (is (pos? (get credit computed)))))))
