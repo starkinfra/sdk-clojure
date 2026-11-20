@@ -480,6 +480,68 @@ You can issue cards with specific spending rules.
   (println card))
 ```
 
+### Create IssuingCards without a holder
+
+A physical card can be created without a holder and have one assigned later, while it is still "pending".
+Omit :holder-name, :holder-tax-id and :holder-external-id (send all three or none of them). The API rejects
+virtual cards without a holder. The holder fields come back as empty strings.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.issuing-card :as issuing-card]))
+
+(def cards (issuing-card/create
+             [{:product-id "52091969"
+               :type "physical"
+               :tags ["department: tech"]}]))
+
+(doseq [card cards]
+  (println card))
+```
+
+To assign a holder to a card created without one, send :holder-name, :holder-tax-id and :holder-external-id
+(all three or none) while the card is still "pending". The holder can be assigned and the card
+activated in the same call by also sending :status "active" and the :pin.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.issuing-card :as issuing-card]))
+
+(def card (issuing-card/update "5155165527080960"
+                               {:holder-name "Developers"
+                                :holder-tax-id "012.345.678-90"
+                                :holder-external-id "1234"
+                                :status "active"
+                                :pin "1234"}))
+
+(println card)
+```
+
+### Update several IssuingCards at once
+
+Holders can be assigned to several pending cards in a single request. The API applies the whole list or none
+of it. Each item is a map with the card :id and the fields the API accepts in this route: :status, :rules, :tags and the
+three holder fields (:pin and :display-name are accepted only when updating a single card). Build each item with only
+the :id and the fields to change: every non-nil attribute of a map is sent, so maps returned by get or query must not be reused.
+
+```clojure
+(ns my-lib.core
+  (:require [starkinfra.issuing-card :as issuing-card]))
+
+(def cards (issuing-card/update-multi
+             [{:id "5155165527080960"
+               :holder-name "Developers"
+               :holder-tax-id "012.345.678-90"
+               :holder-external-id "1234"}
+              {:id "5656565656565656"
+               :holder-name "Developers"
+               :holder-tax-id "012.345.678-90"
+               :holder-external-id "1234"}]))
+
+(doseq [card cards]
+  (println card))
+```
+
 ### Query IssuingCards
 
 You can get a list of created cards given some filters.
