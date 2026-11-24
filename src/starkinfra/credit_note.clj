@@ -80,6 +80,7 @@
     - `:rules` [list of maps, default []]: list of CreditNote behavior rules. ex: [{:key \"invoiceCreationMode\" :value \"scheduled\"}]
       - `:key` [string]: rule to be customized, describes what CreditNote behavior will be altered. ex: \"invoiceCreationMode\"
       - `:value` [string]: value of the rule. ex: \"scheduled\", \"instant\", \"never\"
+    - `:template-replacements` [map, default nil]: values that fill the placeholders of the contract template, shaped as described in starkinfra.credit-note.template-replacements. The keys depend on the template, there is no fixed list. Sent as `templateReplacements`, and left out of the request when nil. Write the keys as kebab-case keywords, as in the rest of the SDK (`:guarantor-name` is sent as `guarantorName`); camelCase string keys are sent as written. Nested nil values are dropped. ex: {:guarantor-name \"Jon Snow\" :guarantor-tax-id \"012.345.678-90\" :guarantor-address \"Av. Paulista, 200 - Bela Vista - Sao Paulo, SP\"}
 
   ## Attributes (return-only):
     - `:id` [string]: unique id returned when the CreditNote is created. ex: \"5656565656565656\"
@@ -88,6 +89,7 @@
     - `:transaction-ids` [list of strings]: ledger transaction ids linked to this CreditNote. ex: [\"19827356981273\"]
     - `:workspace-id` [string]: ID of the Workspace that generated this CreditNote. ex: \"4545454545454545\"
     - `:debtor-workspace-id` [string]: ID of the debtor's Workspace, when it differs from the Workspace that generated this CreditNote. ex: \"4545454545454545\"
+    - `:template-replacements` [map]: the replacements stored with the CreditNote, when the API returns them. Keys come back as kebab-case keywords (`:guarantor-name`), like every other key of the response.
     - `:tax-amount` [integer]: tax amount included in the CreditNote. ex: 100
     - `:nominal-interest` [float]: yearly nominal interest rate of the CreditNote, in percentage. ex: 11.5
     - `:interest` [float]: yearly effective interest rate of the CreditNote, in percentage. ex: 12.5

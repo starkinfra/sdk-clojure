@@ -3274,11 +3274,16 @@ being able to create a credit operation for them.
                :zip-code "01310-000"
                :rebate-amount 0
                :tags ["War supply"]
-               :rules [{:key "invoiceCreationMode" :value "scheduled"}]}]))
+               :rules [{:key "invoiceCreationMode" :value "scheduled"}]
+               :template-replacements {:guarantor-name "Jon Snow"
+                                       :guarantor-tax-id "012.345.678-90"
+                                       :guarantor-address "Av. Paulista, 200 - Bela Vista - Sao Paulo, SP"}}]))
 
 (doseq [note notes]
   (println note))
 ```
+
+**Note**: `:template-replacements` is optional and its keys depend on your contract template. Write the keys as kebab-case keywords, as in the rest of the SDK: they are sent in camelCase (`:guarantor-name` is sent as `guarantorName`). Keys written as camelCase strings (`"guarantorName"`) are sent as written. Nested nil values are not sent. Keys of the returned map are kebab-case keywords (`:guarantor-name`), as in every other response of this SDK.
 
 ### Query CreditNotes
 
