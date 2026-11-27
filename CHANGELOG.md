@@ -14,6 +14,9 @@ Given a version number MAJOR.MINOR.PATCH, increment:
 
 ## [Unreleased]
 ### Added
+- starkinfra.issuing-card/update-multi, to update several cards in one request (PATCH /v2/issuing-card), through a patch-multi verb in starkinfra.utils.rest
+- :holder-name, :holder-tax-id and :holder-external-id to the params of starkinfra.issuing-card/update, to assign a holder to a pending card
+- holder fields documented as optional in the IssuingCard map, so a physical card can be created without a holder
 - project skeleton over com.starkinfra/starkcore 0.2.0, with a `:sandbox` test selector so the offline suite is the default
 - starkinfra.settings with the Stark Infra host, api version, timeout, default user and error language
 - starkinfra.user with project, organization and organization-replace

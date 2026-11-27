@@ -73,6 +73,16 @@
                           :query query})]
     (plural json)))
 
+(defn patch-multi
+  "The PATCH counterpart of `post-multi`: `{plural [items]}` to the collection
+  endpoint, the way python's `patch_multi` sends it."
+  [user path payload query]
+  (let [plural (last-name-plural path)
+        json (fetch-json user :patch (endpoint path)
+                         {:payload {(name plural) (mapv json/api-json payload)}
+                          :query query})]
+    (plural json)))
+
 (defn post-single [user path payload query]
   (let [json (fetch-json user :post (endpoint path)
                          {:payload (json/api-json payload) :query query})]
