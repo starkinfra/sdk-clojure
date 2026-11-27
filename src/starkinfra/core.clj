@@ -16,6 +16,7 @@
    [starkinfra.credit-note]
    [starkinfra.credit-note.invoice]
    [starkinfra.credit-note.log]
+   [starkinfra.credit-note.template-replacements]
    [starkinfra.credit-preview]
    [starkinfra.credit-signer]
    [starkinfra.dynamic-brcode]
